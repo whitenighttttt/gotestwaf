@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/chromedp/chromedp"
@@ -86,6 +87,8 @@ func (p *SOAPBody) prepareGoHTTPClientRequest(requestURL, payload string, config
 
 	req.Header.Add("SOAPAction", `"http://schemas.xmlsoap.org/soap/actor/next"`)
 	req.Header.Add("Content-Type", "text/xml")
+	// 手动设置 Content-Length
+	req.Header.Set("Content-Length", strconv.Itoa(len(payload)))
 
 	return &types.GoHTTPRequest{Req: req}, nil
 }

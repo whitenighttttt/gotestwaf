@@ -7,6 +7,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/url"
+	"strconv"
 
 	"github.com/chromedp/chromedp"
 	"github.com/wallarm/gotestwaf/internal/scanner/clients/chrome/helpers"
@@ -73,6 +74,8 @@ func (p *HTMLMultipartForm) prepareGoHTTPClientRequest(requestURL, payload strin
 	}
 
 	req.Header.Add("Content-Type", writer.FormDataContentType())
+	// 手动设置 Content-Length
+	req.Header.Set("Content-Length", strconv.Itoa(body.Len()))
 
 	return &types.GoHTTPRequest{Req: req}, nil
 }

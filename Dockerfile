@@ -11,6 +11,7 @@ COPY ./go.mod ./go.sum ./
 RUN go mod download
 
 COPY . .
+RUN go mod tidy
 RUN go build -o gotestwaf \
     -ldflags "-X github.com/wallarm/gotestwaf/internal/version.Version=$(git describe --tags)" \
     ./cmd/gotestwaf

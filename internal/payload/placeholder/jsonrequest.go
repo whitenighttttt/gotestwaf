@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/chromedp/chromedp"
@@ -68,6 +69,8 @@ func (p *JSONRequest) prepareGoHTTPClientRequest(requestURL, payload string, con
 	}
 
 	req.Header.Add("Content-Type", "application/json")
+	// 手动设置 Content-Length
+	req.Header.Set("Content-Length", strconv.Itoa(len(payload)))
 
 	return &types.GoHTTPRequest{Req: req}, nil
 }
