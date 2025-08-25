@@ -5,6 +5,7 @@ import (
 
 	"github.com/wallarm/gotestwaf/internal/helpers"
 	"github.com/wallarm/gotestwaf/internal/scanner/types"
+	"github.com/wallarm/gotestwaf/internal/config"
 )
 
 const (
@@ -26,6 +27,13 @@ type Placeholder interface {
 
 type PlaceholderConfig interface {
 	helpers.Hash
+}
+
+var globalConfig *config.Config
+
+// SetGlobalConfig sets the global configuration for placeholders
+func SetGlobalConfig(cfg *config.Config) {
+	globalConfig = cfg
 }
 
 var Placeholders map[string]Placeholder

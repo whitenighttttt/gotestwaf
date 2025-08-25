@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/wallarm/gotestwaf/internal/scanner/clients/chrome/helpers"
@@ -47,10 +48,14 @@ func (p *RequestBody) CreateRequest(requestURL, payload string, config Placehold
 }
 
 func (p *RequestBody) prepareGoHTTPClientRequest(requestURL, payload string, config PlaceholderConfig) (*types.GoHTTPRequest, error) {
-	// check if we need to set Content-Length manually here
 	req, err := http.NewRequest(http.MethodPost, requestURL, strings.NewReader(payload))
 	if err != nil {
 		return nil, err
+	}
+
+	// Manually set Content-Length header if configured
+	if globalConfig != nil && globalConfig.AddContentLength {
+		req.Header.Set("Content-Length", strconv.Itoa(len(payload)))
 	}
 
 	return &types.GoHTTPRequest{Req: req}, nil

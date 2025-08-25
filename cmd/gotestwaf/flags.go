@@ -115,6 +115,7 @@ func parseFlags() (args []string, err error) {
 	flag.String("proxy", "", "Proxy URL to use")
 	flag.String("addHeader", "", "An HTTP header to add to requests")
 	flag.Bool("addDebugHeader", false, "Add header \"X-GoTestWAF-Test\" with a hash of the test information in each request")
+	flag.Bool("addContentLength", false, "If present, manually set Content-Length header for requests")
 
 	// GoHTTP client only settings
 	flag.Int("maxIdleConns", 2, "The maximum number of keep-alive connections (gohttp only)")

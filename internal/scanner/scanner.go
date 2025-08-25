@@ -126,7 +126,7 @@ func New(
 		return nil, errors.Wrap(err, "couldn't create GraphQL client")
 	}
 
-	return &Scanner{
+	scanner := &Scanner{
 		logger:            logger,
 		cfg:               cfg,
 		db:                db,
@@ -136,7 +136,12 @@ func New(
 		requestTemplates:  requestTemplates,
 		router:            router,
 		enableDebugHeader: enableDebugHeader,
-	}, nil
+	}
+
+	// Set global configuration for placeholders
+	placeholder.SetGlobalConfig(cfg)
+
+	return scanner, nil
 }
 
 func (s *Scanner) CheckIfJavaScriptRequired(ctx context.Context) (bool, error) {

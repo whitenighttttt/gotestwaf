@@ -7,6 +7,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/url"
+	"strconv"
 
 	"github.com/chromedp/chromedp"
 	"github.com/wallarm/gotestwaf/internal/scanner/clients/chrome/helpers"
@@ -47,32 +48,39 @@ func (p *HTMLMultipartForm) CreateRequest(requestURL, payload string, config Pla
 }
 
 func (p *HTMLMultipartForm) prepareGoHTTPClientRequest(requestURL, payload string, config PlaceholderConfig) (*types.GoHTTPRequest, error) {
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+
 	randomName, err := RandomHex(Seed)
 	if err != nil {
 		return nil, err
 	}
 
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-
-	fw, err := writer.CreateFormField(randomName)
+	part, err := writer.CreateFormFile(randomName, "file")
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = fw.Write([]byte(payload))
+	_, err = part.Write([]byte(payload))
 	if err != nil {
 		return nil, err
 	}
 
-	writer.Close()
+	err = writer.Close()
+	if err != nil {
+		return nil, err
+	}
 
-	req, err := http.NewRequest(http.MethodPost, requestURL, bytes.NewReader(body.Bytes()))
+	req, err := http.NewRequest(http.MethodPost, requestURL, body)
 	if err != nil {
 		return nil, err
 	}
 
 	req.Header.Add("Content-Type", writer.FormDataContentType())
+	// Manually set Content-Length header if configured
+	if globalConfig != nil && globalConfig.AddContentLength {
+		req.Header.Set("Content-Length", strconv.Itoa(body.Len()))
+	}
 
 	return &types.GoHTTPRequest{Req: req}, nil
 }

@@ -367,6 +367,7 @@ Usage: ./gotestwaf [OPTIONS] --url <URL>
 
 Options:
       --addDebugHeader          Add header "X-GoTestWAF-Test" with a hash of the test information in each request
+      --addContentLength        If present, manually set Content-Length header for requests
       --addHeader string        An HTTP header to add to requests
       --blockConnReset          If present, connection resets will be considered as block
       --blockRegex string       Regex to detect a blocking page with the same HTTP response status code as a not blocked request
