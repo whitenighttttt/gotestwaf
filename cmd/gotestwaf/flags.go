@@ -152,6 +152,9 @@ func parseFlags() (args []string, err error) {
 	email := flag.String("email", "", "E-mail to which the report will be sent")
 	flag.Bool("hideArgsInReport", false, "If present, GoTestWAF CLI arguments will not be displayed in the report")
 
+	// HTTP request details settings
+	flag.Bool("includeRequestDetails", false, "If present, HTTP request details will be included in reports and exports")
+
 	flag.Parse()
 
 	if len(os.Args) == 1 {

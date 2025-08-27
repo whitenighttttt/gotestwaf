@@ -16,3 +16,6 @@ headers:
   Sec-Fetch-Dest: document
   Accept-Encoding: gzip, deflate, br, zstd
   Accept-Language: en-US;q=0.8,en;q=0.7
+
+# HTTP request details settings
+# includeRequestDetails: true  # Enable to include HTTP request details in reports and exports

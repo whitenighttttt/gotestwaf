@@ -56,6 +56,9 @@ type Config struct {
 	Email            string   `mapstructure:"email"`
 	HideArgsInReport bool     `mapstructure:"hideArgsInReport"`
 
+	// HTTP request details settings
+	IncludeRequestDetails bool `mapstructure:"includeRequestDetails"`
+
 	// config.yaml
 	HTTPHeaders map[string]string `mapstructure:"headers"`
 

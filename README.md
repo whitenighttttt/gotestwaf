@@ -381,6 +381,7 @@ Options:
       --idleConnTimeout int     The maximum amount of time a keep-alive connection will live (gohttp only) (default 2)
       --ignoreUnresolved        If present, unresolved test cases will be considered as bypassed (affect score and results)
       --includePayloads         If present, payloads will be included in HTML/PDF report
+      --includeRequestDetails   If present, HTTP request details will be included in reports and exports
       --logFormat string        Set logging format: text, json (default "text")
       --logLevel string         Logging level: panic, fatal, error, warn, info, debug, trace (default "info")
       --maxIdleConns int        The maximum number of keep-alive connections (gohttp only) (default 2)

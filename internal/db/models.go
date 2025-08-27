@@ -18,7 +18,7 @@ type Info struct {
 	AdditionalInfo     []string
 	Type               string
 	
-	// 新增：HTTP请求信息
+	       // New: HTTP request information
 	HTTPMethod         string
 	RequestURL         string
 	RequestHeaders     string

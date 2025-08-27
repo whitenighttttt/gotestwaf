@@ -8,7 +8,7 @@ import (
 	"github.com/wallarm/gotestwaf/internal/payload/encoder"
 )
 
-func (db *DB) ExportPayloads(payloadsExportFile string) error {
+func (db *DB) ExportPayloads(payloadsExportFile string, includeRequestDetails bool) error {
 	csvFile, err := os.Create(payloadsExportFile)
 	if err != nil {
 		return err
@@ -18,7 +18,8 @@ func (db *DB) ExportPayloads(payloadsExportFile string) error {
 	csvWriter := csv.NewWriter(csvFile)
 	defer csvWriter.Flush()
 
-	if err := csvWriter.Write([]string{
+	// Write headers
+	headers := []string{
 		"Payload",
 		"Check Status",
 		"Response Code",
@@ -27,11 +28,18 @@ func (db *DB) ExportPayloads(payloadsExportFile string) error {
 		"Set",
 		"Case",
 		"Test Result",
-		"HTTP Method",
-		"Request URL",
-		"Request Headers",
-		"Request Body",
-	}); err != nil {
+	}
+	
+	if includeRequestDetails {
+		headers = append(headers, []string{
+			"HTTP Method",
+			"Request URL",
+			"Request Headers",
+			"Request Body",
+		}...)
+	}
+	
+	if err := csvWriter.Write(headers); err != nil {
 		return err
 	}
 
@@ -49,7 +57,8 @@ func (db *DB) ExportPayloads(payloadsExportFile string) error {
 			testResult = "failed"
 		}
 
-		err = csvWriter.Write([]string{
+		// Prepare data row
+		dataRow := []string{
 			ep,
 			"blocked",
 			strconv.Itoa(blockedTest.ResponseStatusCode),
@@ -58,11 +67,18 @@ func (db *DB) ExportPayloads(payloadsExportFile string) error {
 			blockedTest.Set,
 			blockedTest.Case,
 			testResult,
-			blockedTest.HTTPMethod,
-			blockedTest.RequestURL,
-			blockedTest.RequestHeaders,
-			blockedTest.RequestBody,
-		})
+		}
+		
+		if includeRequestDetails {
+			dataRow = append(dataRow, []string{
+				blockedTest.HTTPMethod,
+				blockedTest.RequestURL,
+				blockedTest.RequestHeaders,
+				blockedTest.RequestBody,
+			}...)
+		}
+		
+		err = csvWriter.Write(dataRow)
 		if err != nil {
 			return err
 		}
@@ -82,7 +98,8 @@ func (db *DB) ExportPayloads(payloadsExportFile string) error {
 			testResult = "passed"
 		}
 
-		err = csvWriter.Write([]string{
+		// Prepare data row
+		dataRow := []string{
 			ep,
 			"passed",
 			strconv.Itoa(passedTest.ResponseStatusCode),
@@ -91,11 +108,18 @@ func (db *DB) ExportPayloads(payloadsExportFile string) error {
 			passedTest.Set,
 			passedTest.Case,
 			testResult,
-			passedTest.HTTPMethod,
-			passedTest.RequestURL,
-			passedTest.RequestHeaders,
-			passedTest.RequestBody,
-		})
+		}
+		
+		if includeRequestDetails {
+			dataRow = append(dataRow, []string{
+				passedTest.HTTPMethod,
+				passedTest.RequestURL,
+				passedTest.RequestHeaders,
+				passedTest.RequestBody,
+			}...)
+		}
+		
+		err = csvWriter.Write(dataRow)
 		if err != nil {
 			return err
 		}
@@ -110,7 +134,8 @@ func (db *DB) ExportPayloads(payloadsExportFile string) error {
 			return err
 		}
 
-		err = csvWriter.Write([]string{
+		// Prepare data row
+		dataRow := []string{
 			ep,
 			"unresolved",
 			strconv.Itoa(naTest.ResponseStatusCode),
@@ -119,11 +144,18 @@ func (db *DB) ExportPayloads(payloadsExportFile string) error {
 			naTest.Set,
 			naTest.Case,
 			"unknown",
-			naTest.HTTPMethod,
-			naTest.RequestURL,
-			naTest.RequestHeaders,
-			naTest.RequestBody,
-		})
+		}
+		
+		if includeRequestDetails {
+			dataRow = append(dataRow, []string{
+				naTest.HTTPMethod,
+				naTest.RequestURL,
+				naTest.RequestHeaders,
+				naTest.RequestBody,
+			}...)
+		}
+		
+		err = csvWriter.Write(dataRow)
 		if err != nil {
 			return err
 		}

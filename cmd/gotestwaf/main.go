@@ -244,7 +244,7 @@ func run(ctx context.Context, cfg *config.Config, logger *logrus.Logger) error {
 	}
 
 	payloadFiles := filepath.Join(cfg.ReportPath, reportName+".csv")
-	err = db.ExportPayloads(payloadFiles)
+	err = db.ExportPayloads(payloadFiles, cfg.IncludeRequestDetails)
 	if err != nil {
 		errors.Wrap(err, "payloads exporting")
 	}
