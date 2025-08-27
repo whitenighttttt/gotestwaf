@@ -17,6 +17,12 @@ type Info struct {
 	ResponseStatusCode int
 	AdditionalInfo     []string
 	Type               string
+	
+	// 新增：HTTP请求信息
+	HTTPMethod         string
+	RequestURL         string
+	RequestHeaders     string
+	RequestBody        string
 }
 
 type yamlConfig struct {

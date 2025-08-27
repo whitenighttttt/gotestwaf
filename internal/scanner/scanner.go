@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -563,6 +565,7 @@ func (s *Scanner) sendGraphQLRequest(ctx context.Context, pc *payloadConfig) err
 	var (
 		resp types.Response
 		err  error
+		req  types.Request
 	)
 
 	pl := &p.PayloadInfo{
@@ -573,12 +576,16 @@ func (s *Scanner) sendGraphQLRequest(ctx context.Context, pc *payloadConfig) err
 		DebugHeaderValue:  pc.debugHeaderValue,
 	}
 
+	// 获取请求对象以便记录请求信息
+	// 注意：GraphQL客户端不公开URL，我们暂时不记录GraphQL请求的详细信息
+	req = nil
+
 	resp, err = s.graphqlClient.SendPayload(ctx, pl)
 	if err == nil && resp != nil {
 		err = resp.GetError()
 	}
 
-	err = s.updateDB(ctx, pc, &testStatus{}, nil, resp, err, "", false)
+	err = s.updateDB(ctx, pc, &testStatus{}, req, resp, err, "", false)
 
 	return err
 }
@@ -588,6 +595,7 @@ func (s *Scanner) sendRequest(ctx context.Context, pc *payloadConfig) error {
 	var (
 		resp types.Response
 		err  error
+		req  types.Request
 	)
 
 	pl := &p.PayloadInfo{
@@ -598,12 +606,18 @@ func (s *Scanner) sendRequest(ctx context.Context, pc *payloadConfig) error {
 		DebugHeaderValue:  pc.debugHeaderValue,
 	}
 
+	// 获取请求对象以便记录请求信息
+	req, err = pl.GetRequest(s.cfg.URL, types.GoHTTPClient)
+	if err != nil {
+		return errors.Wrap(err, "couldn't prepare request")
+	}
+
 	resp, err = s.httpClient.SendPayload(ctx, s.cfg.URL, pl)
 	if err == nil && resp != nil {
 		err = resp.GetError()
 	}
 
-	err = s.updateDB(ctx, pc, &testStatus{}, nil, resp, err, "", false)
+	err = s.updateDB(ctx, pc, &testStatus{}, req, resp, err, "", false)
 
 	return err
 }
@@ -663,7 +677,7 @@ func (s *Scanner) updateDB(
 	additionalInfo string,
 	isGRPC bool,
 ) (err error) {
-	info := payloadConfig.toInfo(resp)
+	info := payloadConfig.toInfoWithRequest(resp, req)
 
 	var blockedByReset bool
 	if sendErr != nil {
@@ -811,4 +825,126 @@ func (pc *payloadConfig) toInfo(resp types.Response) *db.Info {
 	}
 
 	return info
+}
+
+// toInfoWithRequest 创建包含完整请求信息的Info结构体
+func (pc *payloadConfig) toInfoWithRequest(resp types.Response, req types.Request) *db.Info {
+	info := pc.toInfo(resp)
+	
+	// 提取HTTP请求信息
+	if req != nil {
+		switch r := req.(type) {
+		case *types.GoHTTPRequest:
+			if r.Req != nil {
+				info.HTTPMethod = r.Req.Method
+				info.RequestURL = r.Req.URL.String()
+				
+				// 格式化请求头
+				headers := make([]string, 0, len(r.Req.Header))
+				for k, v := range r.Req.Header {
+					headers = append(headers, fmt.Sprintf("%s: %s", k, strings.Join(v, ", ")))
+				}
+				sort.Strings(headers)
+				info.RequestHeaders = strings.Join(headers, "; ")
+				
+				// 读取请求体并自适应更新Content-Type和Content-Length
+				if r.Req.Body != nil {
+					if bodyBytes, err := io.ReadAll(r.Req.Body); err == nil {
+						info.RequestBody = string(bodyBytes)
+						
+						// 自适应设置Content-Length
+						actualLength := len(bodyBytes)
+						r.Req.Header.Set("Content-Length", strconv.Itoa(actualLength))
+						r.Req.ContentLength = int64(actualLength)
+						
+						// 自适应设置Content-Type（如果当前没有设置或者不合适）
+						updateContentTypeIfNeeded(r.Req, bodyBytes)
+						
+						// 重新设置body，因为ReadAll会消耗掉body
+						r.Req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+					}
+				}
+			}
+		case *types.ChromeDPTasks:
+			// Chrome请求的信息可能已经在ResponseMeta中
+			if r.ResponseMeta != nil {
+				// 对于Chrome请求，我们可能无法获取完整的请求信息
+				// 但可以记录一些基本信息
+				info.HTTPMethod = "Chrome"
+				info.RequestURL = "Chrome Browser Request"
+			}
+		}
+	}
+	
+	return info
+}
+
+// updateContentTypeIfNeeded 根据请求体内容自适应更新Content-Type
+func updateContentTypeIfNeeded(req *http.Request, bodyBytes []byte) {
+	if len(bodyBytes) == 0 {
+		return
+	}
+	
+	bodyStr := string(bodyBytes)
+	currentContentType := req.Header.Get("Content-Type")
+	
+	// 检测内容类型并自适应设置
+	var newContentType string
+	
+	// 检测JSON格式
+	if isJSON(bodyStr) {
+		newContentType = "application/json"
+	} else if isXML(bodyStr) {
+		// 检测XML格式
+		newContentType = "application/xml"
+	} else if isHTML(bodyStr) {
+		// 检测HTML格式
+		newContentType = "text/html"
+	} else if isFormData(bodyStr) {
+		// 检测表单数据格式
+		newContentType = "application/x-www-form-urlencoded"
+	} else {
+		// 默认为纯文本
+		newContentType = "text/plain"
+	}
+	
+	// 如果当前Content-Type为空，或者检测到的类型与当前不匹配，则更新
+	if currentContentType == "" || !strings.Contains(currentContentType, newContentType) {
+		req.Header.Set("Content-Type", newContentType)
+	}
+}
+
+// isJSON 检测字符串是否为JSON格式
+func isJSON(s string) bool {
+	s = strings.TrimSpace(s)
+	return (strings.HasPrefix(s, "{") && strings.HasSuffix(s, "}")) ||
+		   (strings.HasPrefix(s, "[") && strings.HasSuffix(s, "]"))
+}
+
+// isXML 检测字符串是否为XML格式
+func isXML(s string) bool {
+	s = strings.TrimSpace(s)
+	return strings.HasPrefix(s, "<") && strings.HasSuffix(s, ">") &&
+		   (strings.Contains(s, "<?xml") || strings.Contains(s, "<"))
+}
+
+// isHTML 检测字符串是否为HTML格式
+func isHTML(s string) bool {
+	s = strings.TrimSpace(s)
+	lowerS := strings.ToLower(s)
+	return strings.Contains(lowerS, "<html") || strings.Contains(lowerS, "<!doctype html") ||
+		   (strings.HasPrefix(lowerS, "<") && (strings.Contains(lowerS, "<body") || 
+		   strings.Contains(lowerS, "<head") || strings.Contains(lowerS, "<div")))
+}
+
+// isFormData 检测字符串是否为表单数据格式
+func isFormData(s string) bool {
+	// 检测是否为 key=value&key2=value2 格式
+	if !strings.Contains(s, "=") {
+		return false
+	}
+	
+	// 简单检测：包含=号且不包含JSON/XML/HTML特征
+	return !isJSON(s) && !isXML(s) && !isHTML(s) && 
+		   (strings.Contains(s, "&") || strings.Count(s, "=") == 1)
 }

@@ -27,6 +27,10 @@ func (db *DB) ExportPayloads(payloadsExportFile string) error {
 		"Set",
 		"Case",
 		"Test Result",
+		"HTTP Method",
+		"Request URL",
+		"Request Headers",
+		"Request Body",
 	}); err != nil {
 		return err
 	}
@@ -54,6 +58,10 @@ func (db *DB) ExportPayloads(payloadsExportFile string) error {
 			blockedTest.Set,
 			blockedTest.Case,
 			testResult,
+			blockedTest.HTTPMethod,
+			blockedTest.RequestURL,
+			blockedTest.RequestHeaders,
+			blockedTest.RequestBody,
 		})
 		if err != nil {
 			return err
@@ -83,6 +91,10 @@ func (db *DB) ExportPayloads(payloadsExportFile string) error {
 			passedTest.Set,
 			passedTest.Case,
 			testResult,
+			passedTest.HTTPMethod,
+			passedTest.RequestURL,
+			passedTest.RequestHeaders,
+			passedTest.RequestBody,
 		})
 		if err != nil {
 			return err
@@ -107,6 +119,10 @@ func (db *DB) ExportPayloads(payloadsExportFile string) error {
 			naTest.Set,
 			naTest.Case,
 			"unknown",
+			naTest.HTTPMethod,
+			naTest.RequestURL,
+			naTest.RequestHeaders,
+			naTest.RequestBody,
 		})
 		if err != nil {
 			return err
